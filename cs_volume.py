@@ -500,6 +500,13 @@ class AnsibleCloudStack(object):
         self.module.fail_json(msg="Account '%s' not found" % account)
 
 
+    def _get_account_type(self):
+        accounts = self.cs.listAccounts()
+        if accounts:
+            return accounts['account'][0]['accounttype']
+        return None
+
+
     def get_domain(self, key=None):
         if self.domain:
             return self._get_by_key(key, self.domain)
@@ -708,13 +715,16 @@ class AnsibleCloudStackVolume(AnsibleCloudStack):
             args['account'] = self.get_account(key='name')
             args['domainid'] = self.get_domain(key='id')
             args['diskofferingid'] = disk_offering_id
-            args['displayvolume'] = self.module.params.get('display_volume')
             args['maxiops'] = self.module.params.get('max_iops')
             args['miniops'] = self.module.params.get('min_iops')
             args['projectid'] = self.get_project(key='id')
             args['size'] = self.module.params.get('size')
             args['snapshotid'] = snapshot_id
             args['zoneid'] = self.get_zone(key='id')
+
+            # Include displayvolume only when account is Root Admin
+            if self._get_account_type() == 1:
+                args['displayvolume'] = self.module.params.get('display_volume')
 
             if not self.module.check_mode:
                 res = self.cs.createVolume(**args)
